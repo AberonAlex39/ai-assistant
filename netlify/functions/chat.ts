@@ -1,54 +1,55 @@
+// netlify/functions/chat.ts
 import type { Handler } from "@netlify/functions";
+import fetch from "cross-fetch";
 
 export const handler: Handler = async (event) => {
   try {
-    const { message } = JSON.parse(event.body || "{}");
+    if (event.httpMethod !== "POST") {
+      return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
+    }
+    if (!event.body) {
+      return { statusCode: 400, body: JSON.stringify({ error: "Empty request body" }) };
+    }
 
-    if (!message) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "No message provided" }),
-      };
+    const { message } = JSON.parse(event.body);
+    if (!message || typeof message !== "string") {
+      return { statusCode: 400, body: JSON.stringify({ error: "No valid message provided" }) };
+    }
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return { statusCode: 500, body: JSON.stringify({ error: "Server config error: OPENROUTER_API_KEY missing" }) };
     }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // ВАЖНО: обратные кавычки
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-r1",
-        messages: [
-          {
-            role: "system",
-            content: "Ты AI-ассистент для деловой переписки. Отвечай понятно, полезно и по делу.",
-          },
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-        max_tokens: 300,
-      }),
+        model: "deepseek/deepseek-chat",
+        messages: [{ role: "user", content: message }],
+        temperature: 0.7,
+        max_tokens: 500
+      })
     });
 
     const data = await response.json();
-    const reply = data?.choices?.[0]?.message?.content;
+    const aiReply = data?.choices?.[0]?.message?.content || "No reply generated";
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        reply: reply || "Не удалось сгенерировать ответ",
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: JSON.stringify({ reply: aiReply, rawResponse: data })
     };
-
-  } catch (error) {
-    console.error("Function error:", error);
+  } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Internal server error" }),
+      body: JSON.stringify({ error: "Internal server error", details: err instanceof Error ? err.message : String(err) })
     };
   }
 };
