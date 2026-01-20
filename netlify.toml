@@ -2,3 +2,6 @@
   publish = "dist"
   functions = "netlify/functions"
   command = "npm run build"
+
+[dev]
+  targetPort = 3000
