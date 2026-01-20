@@ -1,45 +1,36 @@
+// services/geminiService.ts
+// Реальная генерация ответа через OpenRouter (DeepSeek R1 free)
 
-import { GoogleGenAI } from "@google/genai";
-import { ReplyPurpose, ReplyTone } from "../types";
-
-export async function generateReply(input: string, purpose: ReplyPurpose, tone: ReplyTone): Promise<string> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-  
-  const systemInstruction = `Ты — опытный ассистент по переписке. Твоя задача — писать готовые к отправке ответы.
-Правила:
-1. Сохраняй контекст входящего сообщения.
-2. Строго учитывай выбранную цель и тон.
-3. Пиши кратко, по-человечески, без лишней "воды".
-4. Используй эмодзи ТОЛЬКО если выбран тон «Дружелюбный».
-5. НИКОГДА не упоминай, что ты AI.
-6. Не добавляй никаких пояснений, вводных слов ("Вот ваш ответ:") или комментариев.
-7. Выводи ТОЛЬКО чистый текст ответа.`;
-
-  const prompt = `Входящее сообщение:
-${input}
-
-Цель ответа:
-${purpose}
-
-Тон ответа:
-${tone}
-
-Напиши готовый к отправке ответ.`;
-
+export async function generateReply(userInput: string) {
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer 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",
       },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-r1-0528:free",
+        messages: [
+          {
+            role: "user",
+            content: userInput
+          }
+        ],
+        max_tokens: 250,
+      }),
     });
 
-    const text = response.text || "Не удалось сгенерировать ответ. Пожалуйста, попробуйте еще раз.";
-    return text.trim();
+    const data = await response.json();
+
+    // Проверяем формат ответа
+    const message = data.choices?.[0]?.message?.content;
+    if (!message) return "Извините, не удалось сгенерировать ответ";
+
+    return message;
+
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error("Произошла ошибка при обращении к AI. Проверьте соединение или попробуйте позже.");
+    console.error("Ошибка при генерации ответа:", error);
+    return "Ошибка сервера. Попробуйте позже.";
   }
 }

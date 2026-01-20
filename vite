@@ -1,0 +1,22 @@
+cat > tsconfig.functions.json <<EOL
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "./netlify/functions",
+    "rootDir": "./netlify/functions",
+    "moduleResolution": "node"
+  },
+  "include": ["netlify/functions/**/*.ts"]
+}
+EOL
+
+
+
+
+
+
+
+

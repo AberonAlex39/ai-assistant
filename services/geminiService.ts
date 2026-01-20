@@ -1,5 +1,5 @@
 // services/geminiService.ts
-import fetch from 'node-fetch'; // если используешь Node, иначе можно fetch из браузера
+import fetch from 'cross-fetch'; // если используешь Node, иначе можно fetch из браузера
 
 // Функция генерации ответа через Tavily
 export async function generateReply(userMessage: string): Promise<string> {
